@@ -154,7 +154,7 @@ namespace DESImplenServer
                 }
 
 
-                String resEnc = ECB.encrypt(response[2]);
+                String resEnc = ECB.encrypt(response[2], response[3]);
 
                 byte[] byteResponse = encoder.GetBytes(resEnc);
 
@@ -169,14 +169,12 @@ namespace DESImplenServer
         private String[] ProcessMessage(String message)
         {
             String[] exp = message.Split(';');
-            String[] expFix = new String[3];
+            String[] expFix = new String[4];
 
-            if (exp.Length > 0)
-                expFix[0] = exp[0];
-            if (exp.Length > 1)
-                expFix[1] = ECB.decrypt(exp[1]);
-            if (exp.Length > 2)
-                expFix[2] = ECB.decrypt(exp[2]);
+            expFix[0] = exp[0];
+            expFix[1] = ECB.decrypt(exp[1], exp[3]);
+            expFix[2] = ECB.decrypt(exp[2], exp[3]);
+            expFix[3] = exp[3];
 
             return expFix;
         }
