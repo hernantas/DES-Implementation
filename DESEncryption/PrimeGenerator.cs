@@ -95,7 +95,21 @@ namespace DESEncryption
             return rndA;
         }
 
-        private ulong GreatestCommondDivisor(ulong a, ulong b)
+        public ulong GetCoPrime(ulong num)
+        {
+            ulong maxCoPrime = 0UL;
+            for (int i = 0; i < firstPrime.Count && firstPrime[i] < num; i++)
+            {
+                if (GreatestCommondDivisor(num, firstPrime[i]) != 1UL)
+                {
+                    maxCoPrime = firstPrime[i];
+                }
+            }
+
+            return maxCoPrime;
+        }
+
+        public ulong GreatestCommondDivisor(ulong a, ulong b)
         {
             ulong temp = 0;
 
