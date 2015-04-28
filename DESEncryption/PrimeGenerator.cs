@@ -97,7 +97,7 @@ namespace DESEncryption
 
         public ulong GetCoPrime(ulong num)
         {
-            for (int i = 0; i < firstPrime.Count && firstPrime[i] < num; i++)
+            for (int i = firstPrime.Count-1; i >= 0; i--)
             {
                 if (GreatestCommondDivisor(num, firstPrime[i]) == 1UL)
                 {
