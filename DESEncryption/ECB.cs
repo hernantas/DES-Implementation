@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,16 +10,17 @@ namespace DESEncryption
 {
     public class ECB
     {
-        public static String encrypt(String plainText)
+        private static RSA rsa = new RSA();
+
+        public static String encrypt(String plainText, string publicKey)
         {
             if (plainText == null)
                 return "";
 
             ASCIIEncoding encoder = new ASCIIEncoding();
             DES des = new DES();
-            
-            String key = "[ZWgjVgn";
-            byte[] kbytes = encoder.GetBytes(key);
+
+            byte[] kbytes = BigInteger.Parse(rsa.GeneratePrivateKey(publicKey)).ToByteArray();
             BitArray bitKey = new BitArray(kbytes);
 
             byte[] tempB = encoder.GetBytes(plainText);
@@ -54,13 +56,12 @@ namespace DESEncryption
             return builder.ToString();
         }
 
-        public static String decrypt(String chiperText)
+        public static String decrypt(String chiperText, string publicKey)
         {
             ASCIIEncoding encoder = new ASCIIEncoding();
             DES des = new DES();
 
-            String key = "[ZWgjVgn";
-            byte[] kbytes = encoder.GetBytes(key);
+            byte[] kbytes = BigInteger.Parse(rsa.GeneratePrivateKey(publicKey)).ToByteArray();
             BitArray bitKey = new BitArray(kbytes);
 
             BitArray bits = UtilityConverter.FromHex(chiperText);
