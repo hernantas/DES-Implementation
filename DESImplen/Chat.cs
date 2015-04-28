@@ -20,10 +20,13 @@ namespace DESImplen
         private int userId = 0;
         private int latestMsg = 0;
         private RSA rsa = new RSA();
+        private string publicKey = "";
 
         public Chat()
         {
             InitializeComponent();
+
+            publicKey = rsa.GeneratePublicKey();
         }
 
         private String SendMessage(String message)
@@ -40,9 +43,8 @@ namespace DESImplen
             ASCIIEncoding encoder = new ASCIIEncoding();
 
             Console.WriteLine(userId.ToString() + ";" + command + ";" + message);
-            String s = userId.ToString() + ";" + ECB.encrypt(command) + ";" + ECB.encrypt(message);
+            String s = userId.ToString() + ";" + ECB.encrypt(command, publicKey) + ";" + ECB.encrypt(message, publicKey) + ";" + publicKey;
             Console.WriteLine(s);
-            Console.WriteLine();
             
             //s = ECB.encrypt(s);
 
@@ -57,7 +59,7 @@ namespace DESImplen
             String response = encoder.GetString(bufferResponse).Replace("\0", "") ;
             client.Close();
 
-            response = ECB.decrypt(response);
+            response = ECB.decrypt(response, publicKey);
 
             return response;
         }
@@ -148,7 +150,8 @@ namespace DESImplen
 
         private void button3_Click(object sender, EventArgs e)
         {
-            listBox1.Items.Add("Key: " + rsa.GenerateKey());
+            listBox1.Items.Add("Public Key: " + publicKey);
+            listBox1.Items.Add("Private Key: " + rsa.GeneratePrivateKey(publicKey));
         }
     }
 }
