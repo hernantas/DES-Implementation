@@ -19,13 +19,11 @@ namespace DESImplen
         private bool connected = false;
         private int userId = 0;
         private int latestMsg = 0;
+        private RSA rsa = new RSA();
 
         public Chat()
         {
             InitializeComponent();
-
-            PrimeGenerator prime = new PrimeGenerator();
-            prime.GeneratePrimeKey();
         }
 
         private String SendMessage(String message)
@@ -146,6 +144,11 @@ namespace DESImplen
             {
                 ChatSend();
             }
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            listBox1.Items.Add("Key: " + rsa.GenerateKey());
         }
     }
 }
