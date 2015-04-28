@@ -97,16 +97,15 @@ namespace DESEncryption
 
         public ulong GetCoPrime(ulong num)
         {
-            ulong maxCoPrime = 0UL;
             for (int i = 0; i < firstPrime.Count && firstPrime[i] < num; i++)
             {
-                if (GreatestCommondDivisor(num, firstPrime[i]) != 1UL)
+                if (GreatestCommondDivisor(num, firstPrime[i]) == 1UL)
                 {
-                    maxCoPrime = firstPrime[i];
+                    return firstPrime[i];
                 }
             }
 
-            return maxCoPrime;
+            return 0;
         }
 
         public ulong GreatestCommondDivisor(ulong a, ulong b)
@@ -119,6 +118,7 @@ namespace DESEncryption
                 a = b;
                 b = temp;
             }
+
             return a;
         }
     }
