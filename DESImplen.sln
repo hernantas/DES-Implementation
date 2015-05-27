@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESImplenServer", "DESImple
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESEncryption", "DESEncryption\DESEncryption.csproj", "{264186F7-DDEC-4CB5-A345-97801EEF340E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Certificate", "Certificate\Certificate.csproj", "{CB910E71-4842-4E9D-8B05-05324CFE2ABF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,6 +27,10 @@ Global
 		{264186F7-DDEC-4CB5-A345-97801EEF340E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{264186F7-DDEC-4CB5-A345-97801EEF340E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{264186F7-DDEC-4CB5-A345-97801EEF340E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB910E71-4842-4E9D-8B05-05324CFE2ABF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB910E71-4842-4E9D-8B05-05324CFE2ABF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB910E71-4842-4E9D-8B05-05324CFE2ABF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB910E71-4842-4E9D-8B05-05324CFE2ABF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

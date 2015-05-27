@@ -22,6 +22,8 @@ namespace DESImplen
         private RSA rsa = new RSA();
         public RSAKey publicKey;
         public string publicDes = "";
+        private RSAKey certificateKey = null;
+        public string certificate = "";
         private string ecbKey = "";
 
         public Chat()
@@ -30,6 +32,21 @@ namespace DESImplen
 
             rsa.GenerateKey();
             ecbKey = ECB.GenerateKey();
+
+            Package verf = new Package();
+            verf.SetHeader("Command", "Register");
+            verf.SetHeader("Public Key n", rsa.Key.n.ToString());
+            verf.SetHeader("Public Key e", rsa.Key.e.ToString());
+            Package certf = SendCommand(verf, 2745);
+            BigInteger n = BigInteger.Parse(certf.GetHeader("Public Key n"));
+            BigInteger e = BigInteger.Parse(certf.GetHeader("Public Key e"));
+            certificateKey = new RSAKey();
+            certificateKey.d = e;
+            certificateKey.n = n;
+            certificate = certf.GetContent();
+
+            Console.WriteLine("Register Certificate: "+certificate);
+            //certf.Print();
         }
 
         private String SendMessage(String message)
@@ -43,14 +60,17 @@ namespace DESImplen
 
         private Package SendCommand(Package pck)
         {
+            pck.SetHeader("Certificate", certificate);
+            return SendCommand(pck, 1234);
+        }
+
+        private Package SendCommand(Package pck, int port)
+        {
             TcpClient client = new TcpClient();
-            IPEndPoint serverEndPoint = new IPEndPoint(IPAddress.Parse(textBox3.Text), 1234);
+            IPEndPoint serverEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), port);
             client.Connect(serverEndPoint);
             NetworkStream clientStream = client.GetStream();
             ASCIIEncoding encoder = new ASCIIEncoding();
-
-            pck.SetHeader("Public Key n", rsa.Key.n.ToString());
-            pck.SetHeader("Public Key e", rsa.Key.e.ToString());
 
             if (pck.GetContent() != "")
                 pck.SetContent(ECB.encrypt(pck.GetContent(), ecbKey));
@@ -65,16 +85,16 @@ namespace DESImplen
             byte[] bufferResponse = new byte[4096];
             clientStream.Read(bufferResponse, 0, 4096);
 
-            String response = encoder.GetString(bufferResponse).Replace("\0", "") ;
+            String response = encoder.GetString(bufferResponse).Replace("\0", "");
             client.Close();
 
             Package resp = new Package();
             resp.SetByString(response);
 
-            Console.WriteLine("#Response From Server: ");
-            resp.Print();
+            //Console.WriteLine("#Response From Server: ");
+            //resp.Print();
 
-            if (resp.GetContent() != "")
+            if (port == 1234 && resp.GetContent() != "")
             {
                 resp.SetContent(ECB.decrypt(resp.GetContent(), publicDes));
             }
@@ -106,7 +126,9 @@ namespace DESImplen
                 pck.SetHeader("Command", "Connect");
                 pck.SetHeader("Username", textBox2.Text);
                 Package response = SendCommand(pck);
-                publicKey = new RSAKey(BigInteger.Parse(response.GetHeader("Public Key n")), BigInteger.Parse(response.GetHeader("Public Key e")));
+                RSA certRSA = new RSA(certificateKey);
+                string[] respCertf = certRSA.decrypt(response.GetHeader("Certificate")).Split(';');
+                publicKey = new RSAKey(BigInteger.Parse(respCertf[2]), BigInteger.Parse(respCertf[3]));
 
                 // Send once more for des key
                 pck = new Package();
@@ -115,7 +137,7 @@ namespace DESImplen
                 pck.SetHeader("DES Key", rsaPub.encrypt(ecbKey));
                 response = SendCommand(pck);
                 this.publicDes = response.GetHeader("DES Key");
-                this.publicDes = rsa.decypt(this.publicDes);
+                this.publicDes = rsa.decrypt(this.publicDes);
                 connected = true;
 
                 button2.Text = "Disconnect";
@@ -146,7 +168,6 @@ namespace DESImplen
             if (connected == true)
             {
                 timer1.Enabled = false;
-                
                 
                 Package pck = new Package();
                 pck.SetHeader("Command", "New Message");
@@ -179,6 +200,7 @@ namespace DESImplen
             listBox1.Items.Add("RSA d: " + key.d);
             listBox1.Items.Add("ECB Key: " + ecbKey);
             listBox1.Items.Add("Public ECB Key: " + publicDes);
+            listBox1.Items.Add("Certificate: " + certificate);
         }
     }
 }

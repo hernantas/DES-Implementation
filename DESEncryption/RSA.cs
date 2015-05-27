@@ -87,13 +87,18 @@ namespace DESEncryption
 
         public string encrypt(string message)
         {
+            return encrypt(message, key.e, key.n);
+        }
+
+        public string encrypt(string message, BigInteger e, BigInteger n)
+        {
             int[] block = UtilityConverter.StringToNumBlock(message);
 
             string hex = "";
 
             for (int i = 0; i < block.Length; i++)
             {
-                BigInteger enc = BigInteger.ModPow(block[i], key.e, key.n);
+                BigInteger enc = BigInteger.ModPow(block[i], e, n);
                 string hexTmp = enc.ToString("x");
 
                 //Console.WriteLine(enc + " to " + hexTmp + "("+hexTmp.Length+")");
@@ -109,7 +114,12 @@ namespace DESEncryption
             return hex;
         }
 
-        public string decypt(string hex)
+        public string decrypt(string message)
+        {
+            return decrypt(message, key.d, key.n);
+        }
+
+        public string decrypt(string hex, BigInteger d, BigInteger n)
         {
             string[] hexBlock = hex.Split('g');
             int length = hexBlock.Length;
@@ -120,7 +130,7 @@ namespace DESEncryption
             foreach (string s in hexBlock)
             {
                 BigInteger bint = BigInteger.Parse(s, NumberStyles.AllowHexSpecifier);
-                BigInteger dec = BigInteger.ModPow(bint, Key.d, Key.n);
+                BigInteger dec = BigInteger.ModPow(bint, d, n);
                 numblock[i++] = (int)dec;
             }
 

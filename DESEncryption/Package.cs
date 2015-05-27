@@ -83,7 +83,10 @@ namespace DESEncryption
                 Console.WriteLine(kvp.Key + "=" + kvp.Value);
             }
 
-            Console.WriteLine("> "+content);
+            Console.WriteLine("--------------------------------");
+            Console.WriteLine(content);
+            Console.WriteLine("--------------------------------");
+            Console.WriteLine();
         }
     }
 }

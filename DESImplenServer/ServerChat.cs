@@ -47,6 +47,8 @@ namespace DESImplenServer
         private TcpListener listener;
         private Thread thread;
         private bool listening;
+        private string certificate = "";
+        private RSAKey certificateKey = null;
 
         private List<UserData> users = new List<UserData>();
         public List<UserData> UserList
@@ -77,7 +79,17 @@ namespace DESImplenServer
             rsa.GenerateKey();
             ecbKey = ECB.GenerateKey();
 
-            Console.WriteLine("ECB Key: " + ecbKey);
+            Package verf = new Package();
+            verf.SetHeader("Command", "Register");
+            verf.SetHeader("Public Key n", rsa.Key.n.ToString());
+            verf.SetHeader("Public Key e", rsa.Key.e.ToString());
+            Package certf = SendCommand(verf, 2745);
+            BigInteger n = BigInteger.Parse(certf.GetHeader("Public Key n"));
+            BigInteger e = BigInteger.Parse(certf.GetHeader("Public Key e"));
+            certificateKey = new RSAKey();
+            certificateKey.d = e;
+            certificateKey.n = n;
+            certificate = certf.GetContent();
         }
 
         public void StartServer()
@@ -88,6 +100,33 @@ namespace DESImplenServer
             this.thread.Start();
 
             listening = true;
+        }
+
+        private Package SendCommand(Package pck, int port)
+        {
+            TcpClient client = new TcpClient();
+            IPEndPoint serverEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), port);
+            client.Connect(serverEndPoint);
+            NetworkStream clientStream = client.GetStream();
+            ASCIIEncoding encoder = new ASCIIEncoding();
+
+            String s = pck.GetString();
+
+            byte[] buffer = encoder.GetBytes(s);
+
+            clientStream.Write(buffer, 0, buffer.Length);
+            clientStream.Flush();
+
+            byte[] bufferResponse = new byte[4096];
+            clientStream.Read(bufferResponse, 0, 4096);
+
+            String response = encoder.GetString(bufferResponse).Replace("\0", "");
+            client.Close();
+
+            Package resp = new Package();
+            resp.SetByString(response);
+
+            return resp;
         }
 
         private void ListenToClient()
@@ -157,13 +196,14 @@ namespace DESImplenServer
 
         private Package ProcessMessage(Package pck)
         {
-            Console.WriteLine("#Get Message Client: ");
-            pck.Print();
+            // Console.WriteLine("#Get Message Client: ");
+            // pck.Print();
 
             Package response = new Package();
-
-            BigInteger n = BigInteger.Parse(pck.GetHeader("Public Key n"));
-            BigInteger e = BigInteger.Parse(pck.GetHeader("Public Key e"));
+            RSA certRSA = new RSA(certificateKey);
+            string[] respCertf = certRSA.decrypt(pck.GetHeader("Certificate")).Split(';');
+            BigInteger n = BigInteger.Parse(respCertf[2]);
+            BigInteger e = BigInteger.Parse(respCertf[3]);
             int idUser = GetUserByPublicKey(n, e);
 
             switch(pck.GetHeader("Command"))
@@ -171,8 +211,7 @@ namespace DESImplenServer
                 case "Connect":
                     UserData user = new UserData(n, e, pck.GetHeader("Username"));
                     users.Add(user);
-                    response.SetHeader("Public Key n", rsa.Key.n.ToString());
-                    response.SetHeader("Public Key e", rsa.Key.e.ToString());
+                    response.SetHeader("Certificate", certificate);
                     break;
 
                 case "Disconnect":
@@ -181,7 +220,7 @@ namespace DESImplenServer
 
                 case "DES":
                     string desEnc = pck.GetHeader("DES Key");
-                    users[idUser].desKey = rsa.decypt(desEnc);
+                    users[idUser].desKey = rsa.decrypt(desEnc);
 
                     RSA resRSA = new RSA(users[idUser].key);
                     response.SetHeader("DES Key", resRSA.encrypt(ecbKey));
