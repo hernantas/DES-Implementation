@@ -40,18 +40,27 @@ namespace DESImplenServer
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            listBox1.Items.Clear();
-
-            foreach (KeyValuePair<int, String> s in server.ClientList)
+            if (listBox1.Items.Count != server.UserList.Count)
             {
-                listBox1.Items.Add(s.Value + "(" + s.Key + ")");
+                listBox1.Items.Clear();
+
+                foreach (UserData udat in server.UserList)
+                {
+                    listBox1.Items.Add(udat.username + "(" + udat.key.n + "," + udat.key.e + ")");
+                }
             }
 
-            listBox2.Items.Clear();
-
-            foreach (Message s in server.BufferMessage)
+            if (listBox2.Items.Count != server.BufferMessage.Count)
             {
-                listBox2.Items.Add(server.ClientList[s.UserId]+ ": " +s.message);
+                listBox2.Items.Clear();
+
+                foreach (Message msg in server.BufferMessage)
+                {
+                    if (msg.user != null)
+                        listBox2.Items.Add(msg.user.username + " = " + msg.message);
+                    else
+                        listBox2.Items.Add("# " + msg.message);
+                }
             }
         }
     }

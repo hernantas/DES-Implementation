@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,118 +10,101 @@ namespace DESEncryption
 {
     public class PrimeGenerator
     {
-        private Random rndGen = new Random();
-        private List<ulong> firstPrime = new List<ulong>();
-
-        public PrimeGenerator()
+        public BigInteger FindPrime()
         {
-            PreFetchPrime();
-        }
+            BigInteger x = this.GetRandomNumber(15);
 
-        private void PreFetchPrime()
-        {
-            List<ulong> firstNumber = new List<ulong>();
-
-            for (ulong i = 0UL; i < Math.Sqrt(999999999999999); i++)
+            for (int i = 0; i < 10 * BigInteger.Log(x) + 3; i++)
             {
-                firstNumber.Add(i);
+                if (this.MillerRabin(x, 50))
+                    return x;
+                else
+                    x++;
             }
 
-            firstNumber[0] = 0;
-            firstNumber[1] = 0;
+            return -1;
+        }
 
-            for (int i = 2; i < firstNumber.Count/2; i++)
+        public BigInteger FindCoPrime(BigInteger prime)
+        {
+            for (BigInteger e = 3; e < prime-1; e++)
             {
-                if (firstNumber[i] != 0UL)
+                if (BigInteger.GreatestCommonDivisor(prime, e) == 1)
                 {
-                    for (int j = (int)firstNumber[i] * 2; j < firstNumber.Count; j += (int)firstNumber[i])
-                    {
-                        firstNumber[j] = 0;
-                    }
+                    return e;
                 }
             }
 
-            for (int i = 2; i < firstNumber.Count; i++)
+            return -1;
+        }
+
+        private BigInteger GetRandomNumber(int length)
+        {
+            Random random = new Random();
+            BigInteger ret = new BigInteger();
+            for (int i = 0; i < length; i++)
             {
-                if (firstNumber[i] != 0UL)
+                if (i == 0)
                 {
-                    firstPrime.Add(firstNumber[i]);
+                    ret = random.Next(1, 10);
+                }
+                else
+                {
+                    ret = (ret * 10) + random.Next(0, 10);
                 }
             }
+
+            return ret;
         }
 
-        public ulong GetPrime()
+        private bool MillerRabin(BigInteger n, int certainty)
         {
-            ulong randNum = GetRandomNumber();
+            if (n == 2 || n == 3)
+                return true;
 
-            while (!IsPrime(randNum))
-            {
-                randNum = GetRandomNumber();
-            }
-
-            return randNum;
-        }
-
-        private bool IsPrime(ulong num)
-        {
-            if (num <= 3)
+            if (n < 2 || n % 2 == 0)
                 return false;
 
-            for (int i = 0; firstPrime[i] <= Math.Sqrt(num); i++)
-            {
-                if (num % firstPrime[i] == 0)
-                {
-                    return false;
-                }
+            BigInteger d = n - 1;
+            int s = 0;
 
-                // Console.WriteLine("Pass: " + num + " % " + firstPrime[i] + " = " + (num % firstPrime[i]));
+            while (d % 2 == 0)
+            {
+                d /= 2;
+                s += 1;
             }
 
-            Console.WriteLine(num + " is prime");
+            RandomNumberGenerator rng = RandomNumberGenerator.Create();
+            byte[] bytes = new byte[n.ToByteArray().LongLength];
+            BigInteger a;
+
+            for (int i = 0; i < certainty; i++)
+            {
+                do
+                {
+                    rng.GetBytes(bytes);
+                    a = new BigInteger(bytes);
+                }
+                while (a < 2 || a >= n - 2);
+
+                BigInteger x = BigInteger.ModPow(a, d, n);
+                if (x == 1 || x == n - 1)
+                    continue;
+
+                for (int r = 1; r < s; r++)
+                {
+                    x = BigInteger.ModPow(x, 2, n);
+                    if (x == 1)
+                        return false;
+                    if (x == n - 1)
+                        break;
+                }
+
+                if (x != n - 1)
+                    return false;
+            }
 
             return true;
-        }
-
-        private ulong GetRandomNumber()
-        {
-            ulong rndA = 0UL;
-
-            for (int i = 0; i < 15; i++)
-            {
-                if (i==0)
-                    rndA = Convert.ToUInt64(rndGen.Next(1, 10));
-                else
-                    rndA = (rndA * 10UL) + Convert.ToUInt64(rndGen.Next(0, 10));
-            }
-
-            return rndA;
-        }
-
-        public ulong GetCoPrime(ulong num)
-        {
-            for (int i = firstPrime.Count-1; i >= 0; i--)
-            {
-                if (GreatestCommondDivisor(num, firstPrime[i]) == 1UL)
-                {
-                    return firstPrime[i];
-                }
-            }
-
-            return 0;
-        }
-
-        public ulong GreatestCommondDivisor(ulong a, ulong b)
-        {
-            ulong temp = 0;
-
-            while (b != 0)
-            {
-                temp = a % b;
-                a = b;
-                b = temp;
-            }
-
-            return a;
         }
     }
 }

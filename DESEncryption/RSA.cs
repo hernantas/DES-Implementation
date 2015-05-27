@@ -1,31 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
+using System.Globalization;
 using System.Threading.Tasks;
 
 namespace DESEncryption
 {
     public class RSA
     {
-        private PrimeGenerator generator = null;
-        private string key = "";
-        public string Key
+        private PrimeGenerator generator = new PrimeGenerator();
+        private RSAKey key = new RSAKey();
+        public RSAKey Key
         {
-            get;
-            set;
+            set { key = value; }
+            get { return key; }
         }
 
         public RSA()
         {
-            generator = new PrimeGenerator();
         }
 
-        Tuple<ulong, Tuple<ulong, ulong>> extendedEuclid(ulong a, ulong b) 
+        public RSA(RSAKey key)
         {
-            ulong x = 1, y = 0;
-            ulong xLast = 0, yLast = 1;
-            ulong q, r, m, n;
+            this.key = key;
+        }
+
+        Tuple<BigInteger, Tuple<BigInteger, BigInteger>> extendedEuclid(BigInteger a, BigInteger b) 
+        {
+            BigInteger x = 1, y = 0;
+            BigInteger xLast = 0, yLast = 1;
+            BigInteger q, r, m, n;
 
             while(a != 0) 
             {
@@ -40,54 +46,87 @@ namespace DESEncryption
                 b = a;
                 a = r;
             }
-            return new Tuple<ulong, Tuple<ulong, ulong>>(b, new Tuple<ulong, ulong>(xLast, yLast));
+
+            return new Tuple<BigInteger, Tuple<BigInteger, BigInteger>>(b, new Tuple<BigInteger, BigInteger>(xLast, yLast));
         }
 
-        ulong modInverse(ulong a, ulong m)
+        private BigInteger modInverse(BigInteger a, BigInteger m)
         {
             return (extendedEuclid(a, m).Item2.Item1 + m) % m;
         }
 
-        // Format: First X Digit represent e, Last 15 Digit represent phi
-        public string GeneratePublicKey()
+        public RSAKey GenerateKey()
         {
-            ulong first = generator.GetPrime();
-            ulong second = generator.GetPrime();
-            ulong mult = (first * second);
-            ulong phi =  (first - 1) * (second -1);
-            ulong e = generator.GetCoPrime(phi);
+            BigInteger first = generator.FindPrime();
+            BigInteger second = generator.FindPrime();
+            // BigInteger first = 17;
+            // BigInteger second = 11; 
 
-            string padding = "";
-            for (int i = 0; i < 10-e.ToString().Length; i++)
-            {
-                padding += "0";
-            }
+            while (first == second)
+                second = generator.FindPrime();
 
-            //Console.WriteLine(padding + e.ToString() + " | " + phi.ToString());
+            BigInteger n = (first * second);
+            BigInteger phi = (first - 1) * (second - 1);
+            BigInteger e = generator.FindCoPrime(phi);
+            BigInteger d = modInverse(e, phi);
 
-            // (e, phi)
-            return padding + e.ToString() + phi.ToString();
+            key = new RSAKey();
+            key.n = n;
+            key.e = e;
+            key.d = d;
 
-            //Console.WriteLine("First: " + first.ToString() + " Second: " + second.ToString() +
-            //    " Multiplier: " + mult + " Q: " + phi + " CoPrime: " + e + " D: " + d);
+            Console.WriteLine("first: " + first);
+            Console.WriteLine("second: " + second);
+            Console.WriteLine("pxq: " + n);
+            Console.WriteLine("(p-1)x(q-1): " + phi);
+            Console.WriteLine("e: " + e);
+            Console.WriteLine("d: " + d);
+
+            return key;
         }
 
-        public string GeneratePrivateKey(string publicKey)
+        public string encrypt(string message)
         {
-            string sE = publicKey.Substring(0, 10);
-            string sPhi = publicKey.Substring(10);
-            ulong e = Convert.ToUInt64(sE);
-            ulong phi = Convert.ToUInt64(sPhi);
-            ulong d = modInverse(e, phi);
+            int[] block = UtilityConverter.StringToNumBlock(message);
 
-            string padding = "";
-            for (int i = 0; i < 20-d.ToString().Length; i++)
+            string hex = "";
+
+            for (int i = 0; i < block.Length; i++)
             {
-                padding += "0";
+                BigInteger enc = BigInteger.ModPow(block[i], key.e, key.n);
+                string hexTmp = enc.ToString("x");
+
+                //Console.WriteLine(enc + " to " + hexTmp + "("+hexTmp.Length+")");
+
+                if (hex == "")
+                    hex = hexTmp;
+                else
+                    hex += "g" + hexTmp;
             }
 
-            // (d, phi)
-            return padding + d.ToString() + phi.ToString() ;
+            //Console.WriteLine();
+
+            return hex;
+        }
+
+        public string decypt(string hex)
+        {
+            string[] hexBlock = hex.Split('g');
+            int length = hexBlock.Length;
+
+            int[] numblock = new int[length];
+
+            int i = 0;
+            foreach (string s in hexBlock)
+            {
+                BigInteger bint = BigInteger.Parse(s, NumberStyles.AllowHexSpecifier);
+                BigInteger dec = BigInteger.ModPow(bint, Key.d, Key.n);
+                numblock[i++] = (int)dec;
+            }
+
+            string plain = UtilityConverter.NumBlockToString(numblock);
+
+            return plain;
         }
     }
 }

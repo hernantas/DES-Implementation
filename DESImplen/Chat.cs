@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -17,24 +18,30 @@ namespace DESImplen
     public partial class Chat : Form
     {
         private bool connected = false;
-        private int userId = 0;
         private int latestMsg = 0;
         private RSA rsa = new RSA();
-        private string publicKey = "";
+        public RSAKey publicKey;
+        public string publicDes = "";
+        private string ecbKey = "";
 
         public Chat()
         {
             InitializeComponent();
 
-            publicKey = rsa.GeneratePublicKey();
+            rsa.GenerateKey();
+            ecbKey = ECB.GenerateKey();
         }
 
         private String SendMessage(String message)
         {
-            return SendCommand("message", message);
+            Package pck = new Package();
+            RSA rsaPub = new RSA(publicKey);
+            pck.SetHeader("Command", "Message");
+            pck.SetContent(message);
+            return SendCommand(pck).GetContent();
         }
 
-        private String SendCommand(String command, String message)
+        private Package SendCommand(Package pck)
         {
             TcpClient client = new TcpClient();
             IPEndPoint serverEndPoint = new IPEndPoint(IPAddress.Parse(textBox3.Text), 1234);
@@ -42,11 +49,13 @@ namespace DESImplen
             NetworkStream clientStream = client.GetStream();
             ASCIIEncoding encoder = new ASCIIEncoding();
 
-            Console.WriteLine(userId.ToString() + ";" + command + ";" + message);
-            String s = userId.ToString() + ";" + ECB.encrypt(command, publicKey) + ";" + ECB.encrypt(message, publicKey) + ";" + publicKey;
-            Console.WriteLine(s);
-            
-            //s = ECB.encrypt(s);
+            pck.SetHeader("Public Key n", rsa.Key.n.ToString());
+            pck.SetHeader("Public Key e", rsa.Key.e.ToString());
+
+            if (pck.GetContent() != "")
+                pck.SetContent(ECB.encrypt(pck.GetContent(), ecbKey));
+
+            String s = pck.GetString();
 
             byte[] buffer = encoder.GetBytes(s);
 
@@ -59,9 +68,18 @@ namespace DESImplen
             String response = encoder.GetString(bufferResponse).Replace("\0", "") ;
             client.Close();
 
-            response = ECB.decrypt(response, publicKey);
+            Package resp = new Package();
+            resp.SetByString(response);
 
-            return response;
+            Console.WriteLine("#Response From Server: ");
+            resp.Print();
+
+            if (resp.GetContent() != "")
+            {
+                resp.SetContent(ECB.decrypt(resp.GetContent(), publicDes));
+            }
+
+            return resp;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -84,8 +102,20 @@ namespace DESImplen
         {
             if (!connected)
             {
-                String sUserId = SendCommand("connect", textBox2.Text);
-                userId = int.Parse(sUserId);
+                Package pck = new Package();
+                pck.SetHeader("Command", "Connect");
+                pck.SetHeader("Username", textBox2.Text);
+                Package response = SendCommand(pck);
+                publicKey = new RSAKey(BigInteger.Parse(response.GetHeader("Public Key n")), BigInteger.Parse(response.GetHeader("Public Key e")));
+
+                // Send once more for des key
+                pck = new Package();
+                pck.SetHeader("Command", "DES");
+                RSA rsaPub = new RSA(publicKey);
+                pck.SetHeader("DES Key", rsaPub.encrypt(ecbKey));
+                response = SendCommand(pck);
+                this.publicDes = response.GetHeader("DES Key");
+                this.publicDes = rsa.decypt(this.publicDes);
                 connected = true;
 
                 button2.Text = "Disconnect";
@@ -97,7 +127,9 @@ namespace DESImplen
             }
             else
             {
-                SendCommand("disconnect", userId.ToString());
+                Package pck = new Package();
+                pck.SetHeader("Command", "Disconnect");
+                SendCommand(pck);
                 connected = false;
 
                 button2.Text = "Connect to server...";
@@ -114,26 +146,17 @@ namespace DESImplen
             if (connected == true)
             {
                 timer1.Enabled = false;
+                
+                
+                Package pck = new Package();
+                pck.SetHeader("Command", "New Message");
+                pck.SetContent(latestMsg.ToString());
+                Package response = SendCommand(pck);
 
-                String latestMessage = SendCommand("getLatest", latestMsg.ToString());
-
-                if (latestMessage != "" && latestMessage != "0")
+                if (response.GetContent() != "")
                 {
-                    listBox1.Items.Add(latestMessage);
+                    listBox1.Items.Add(response.GetContent());
                     latestMsg++;
-                }
-
-                String user = SendCommand("getUser", latestMsg.ToString());
-
-                if (user != "" && user != "0")
-                {
-                    String[] exp = user.Split(';');
-
-                    listBox2.Items.Clear();
-                    for (int i = 1; i < exp.Length; i++)
-                    {
-                        listBox2.Items.Add(exp[i]);
-                    }
                 }
 
                 timer1.Enabled = true;
@@ -150,8 +173,12 @@ namespace DESImplen
 
         private void button3_Click(object sender, EventArgs e)
         {
-            listBox1.Items.Add("Public Key: " + publicKey);
-            listBox1.Items.Add("Private Key: " + rsa.GeneratePrivateKey(publicKey));
+            RSAKey key = rsa.Key;
+            listBox1.Items.Add("RSA n: " + key.n);
+            listBox1.Items.Add("RSA e: " + key.e);
+            listBox1.Items.Add("RSA d: " + key.d);
+            listBox1.Items.Add("ECB Key: " + ecbKey);
+            listBox1.Items.Add("Public ECB Key: " + publicDes);
         }
     }
 }

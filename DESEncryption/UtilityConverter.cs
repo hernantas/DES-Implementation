@@ -12,6 +12,37 @@ namespace DESEncryption
 {
     public class UtilityConverter
     {
+        public static int[] StringToNumBlock(string s)
+        {
+            int[] block = new int[s.Length];
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                block[i] = Convert.ToInt32(c);
+            }
+
+            return block;
+        }
+
+        public static string NumBlockToString(int[] block)
+        {
+            string plain = "";
+
+            foreach (int i in block)
+            {
+                plain += Convert.ToChar(i);
+            }
+
+            return plain;
+        }
+
+        public static byte[] GetBytes(string str)
+        {
+            byte[] bytes = new byte[str.Length * sizeof(char)];
+            System.Buffer.BlockCopy(str.ToCharArray(), 0, bytes, 0, bytes.Length);
+            return bytes;
+        }
+
         public static byte ToByte(BitArray bits)
         {
             if (bits.Count != 8)

@@ -34,7 +34,6 @@
             this.button2 = new System.Windows.Forms.Button();
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.textBox2 = new System.Windows.Forms.TextBox();
-            this.listBox2 = new System.Windows.Forms.ListBox();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.textBox3 = new System.Windows.Forms.TextBox();
             this.button3 = new System.Windows.Forms.Button();
@@ -53,7 +52,6 @@
             // 
             // textBox1
             // 
-            this.textBox1.Enabled = false;
             this.textBox1.Location = new System.Drawing.Point(150, 528);
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(541, 20);
@@ -72,11 +70,10 @@
             // 
             // listBox1
             // 
-            this.listBox1.Enabled = false;
             this.listBox1.FormattingEnabled = true;
-            this.listBox1.Location = new System.Drawing.Point(150, 41);
+            this.listBox1.Location = new System.Drawing.Point(12, 41);
             this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(622, 472);
+            this.listBox1.Size = new System.Drawing.Size(760, 472);
             this.listBox1.TabIndex = 3;
             // 
             // textBox2
@@ -87,19 +84,10 @@
             this.textBox2.TabIndex = 4;
             this.textBox2.Text = "Anonymous";
             // 
-            // listBox2
-            // 
-            this.listBox2.Enabled = false;
-            this.listBox2.FormattingEnabled = true;
-            this.listBox2.Location = new System.Drawing.Point(12, 41);
-            this.listBox2.Name = "listBox2";
-            this.listBox2.Size = new System.Drawing.Size(127, 472);
-            this.listBox2.TabIndex = 5;
-            // 
             // timer1
             // 
             this.timer1.Enabled = true;
-            this.timer1.Interval = 500;
+            this.timer1.Interval = 1000;
             this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
             // textBox3
@@ -127,7 +115,6 @@
             this.ClientSize = new System.Drawing.Size(784, 561);
             this.Controls.Add(this.button3);
             this.Controls.Add(this.textBox3);
-            this.Controls.Add(this.listBox2);
             this.Controls.Add(this.textBox2);
             this.Controls.Add(this.listBox1);
             this.Controls.Add(this.button2);
@@ -147,7 +134,6 @@
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.ListBox listBox1;
         private System.Windows.Forms.TextBox textBox2;
-        private System.Windows.Forms.ListBox listBox2;
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.TextBox textBox3;
         private System.Windows.Forms.Button button3;

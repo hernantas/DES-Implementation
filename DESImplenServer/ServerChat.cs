@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using DESEncryption;
+using System.Numerics;
 
 namespace DESImplenServer
 {
@@ -17,29 +18,45 @@ namespace DESImplenServer
 
     class Message
     {
-        public int UserId;
-        public String message;
+        public UserData user = null;
+        public String message = "";
 
-        public Message(int userid, string message)
+        public Message(UserData user, string message)
         {
-            UserId = userid;
+            this.user = user;
             this.message = message;
         }
     };
+
+    class UserData
+    {
+        public RSAKey key = null;
+        public string username = "";
+        public string desKey = "";
+
+        public UserData(BigInteger n, BigInteger e, string username)
+        {
+            this.key = new RSAKey(n, e);
+            this.username = username;
+        }
+    }
+
     class ServerChat
     {
         private int lastId = 0;
         private TcpListener listener;
         private Thread thread;
         private bool listening;
-        private Dictionary<int, String> clientList = new Dictionary<int,String>();
-        public Dictionary<int, String> ClientList
+
+        private List<UserData> users = new List<UserData>();
+        public List<UserData> UserList
         {
             get
             {
-                return clientList;
+                return users;
             }
         }
+
         private List<Message> bufferMessage = new List<Message>();
         public List<Message> BufferMessage
         {
@@ -49,10 +66,18 @@ namespace DESImplenServer
             }
         }
 
+        private RSA rsa = new RSA();
+        private string ecbKey = "";
+
         public ServerChat()
         {
             listening = false;
             bufferMessage.Clear();
+
+            rsa.GenerateKey();
+            ecbKey = ECB.GenerateKey();
+
+            Console.WriteLine("ECB Key: " + ecbKey);
         }
 
         public void StartServer()
@@ -108,55 +133,8 @@ namespace DESImplenServer
                 String clientMessage = encoder.GetString(message, 0, bytesRead);
                 //Console.WriteLine(clientMessage);
 
-                String[] response = ProcessMessage(clientMessage);
-
-                // Process Message
-                if (response[1] == "connect")
-                {
-                    clientList.Add(lastId, response[2]);
-                    response[2] = lastId.ToString();
-                    lastId++;
-                }
-                else if (response[1] == "disconnect")
-                {
-                    Console.WriteLine("DISCONNECT");
-                    clientList.Remove(int.Parse(response[2]));
-                }
-                else if (response[1] == "getLatest")
-                {
-                    String resx = (bufferMessage.Count-1).ToString();
-                    int latest = int.Parse(response[2]);
-
-                    if (latest >= 0 && latest < bufferMessage.Count)
-                    {
-                        response[2] = clientList[bufferMessage[latest].UserId] + ": " + bufferMessage[latest].message;
-                    }
-                    else
-                    {
-                        response[2] = "0";
-                    }
-                }
-                else if (response[1] == "getUser")
-                {
-                    String resx = "";
-
-                    foreach (KeyValuePair<int, String> pair in clientList)
-                    {
-                        resx += ";" + pair.Value;
-                    }
-
-                    response[2] = resx;
-
-                }
-                else if (response[1] == "message")
-                {
-                    bufferMessage.Add(new Message(int.Parse(response[0]), response[2]));
-                }
-
-
-                String resEnc = ECB.encrypt(response[2], response[3]);
-
-                byte[] byteResponse = encoder.GetBytes(resEnc);
+                Package response = ProcessMessage(new Package(clientMessage));
+                byte[] byteResponse = encoder.GetBytes(response.GetString());
 
                 clientStream.Write(byteResponse, 0, byteResponse.Length);
 
@@ -166,17 +144,70 @@ namespace DESImplenServer
             tcpClient.Close();
         }
 
-        private String[] ProcessMessage(String message)
+        private int GetUserByPublicKey(BigInteger n, BigInteger e)
         {
-            String[] exp = message.Split(';');
-            String[] expFix = new String[4];
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].key.n == n && users[i].key.e == e)
+                    return i;
+            }
 
-            expFix[0] = exp[0];
-            expFix[1] = ECB.decrypt(exp[1], exp[3]);
-            expFix[2] = ECB.decrypt(exp[2], exp[3]);
-            expFix[3] = exp[3];
+            return -1;
+        }
 
-            return expFix;
+        private Package ProcessMessage(Package pck)
+        {
+            Console.WriteLine("#Get Message Client: ");
+            pck.Print();
+
+            Package response = new Package();
+
+            BigInteger n = BigInteger.Parse(pck.GetHeader("Public Key n"));
+            BigInteger e = BigInteger.Parse(pck.GetHeader("Public Key e"));
+            int idUser = GetUserByPublicKey(n, e);
+
+            switch(pck.GetHeader("Command"))
+            {
+                case "Connect":
+                    UserData user = new UserData(n, e, pck.GetHeader("Username"));
+                    users.Add(user);
+                    response.SetHeader("Public Key n", rsa.Key.n.ToString());
+                    response.SetHeader("Public Key e", rsa.Key.e.ToString());
+                    break;
+
+                case "Disconnect":
+                    users.RemoveAt(idUser);
+                    break;
+
+                case "DES":
+                    string desEnc = pck.GetHeader("DES Key");
+                    users[idUser].desKey = rsa.decypt(desEnc);
+
+                    RSA resRSA = new RSA(users[idUser].key);
+                    response.SetHeader("DES Key", resRSA.encrypt(ecbKey));
+                    break;
+
+                case "Message":
+                    Message msg = new Message(users[idUser], ECB.decrypt(pck.GetContent(), users[idUser].desKey));
+                    bufferMessage.Add(msg);
+
+                    break;
+                case "New Message":
+                    string lastIndex = ECB.decrypt(pck.GetContent(), users[idUser].desKey);
+                    int index = int.Parse(lastIndex);
+
+                    if (index < bufferMessage.Count)
+                        response.SetContent(bufferMessage[index].user.username + " = " + bufferMessage[index].message);
+
+                    break;
+            }
+
+            if (response.GetContent() != "")
+            {
+                response.SetContent(ECB.encrypt(response.GetContent(), ecbKey));
+            }
+
+            return response;
         }
 
         public void StopServer()

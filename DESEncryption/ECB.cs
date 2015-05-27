@@ -5,14 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace DESEncryption
 {
     public class ECB
     {
-        private static RSA rsa = new RSA();
-
-        public static String encrypt(String plainText, string publicKey)
+        public static String encrypt(String plainText, string ecbKey)
         {
             if (plainText == null)
                 return "";
@@ -20,7 +19,7 @@ namespace DESEncryption
             ASCIIEncoding encoder = new ASCIIEncoding();
             DES des = new DES();
 
-            byte[] kbytes = BigInteger.Parse(rsa.GeneratePrivateKey(publicKey)).ToByteArray();
+            byte[] kbytes = UtilityConverter.GetBytes(ecbKey);
             BitArray bitKey = new BitArray(kbytes);
 
             byte[] tempB = encoder.GetBytes(plainText);
@@ -56,12 +55,12 @@ namespace DESEncryption
             return builder.ToString();
         }
 
-        public static String decrypt(String chiperText, string publicKey)
+        public static String decrypt(String chiperText, string ecbKey)
         {
             ASCIIEncoding encoder = new ASCIIEncoding();
             DES des = new DES();
 
-            byte[] kbytes = BigInteger.Parse(rsa.GeneratePrivateKey(publicKey)).ToByteArray();
+            byte[] kbytes = UtilityConverter.GetBytes(ecbKey);
             BitArray bitKey = new BitArray(kbytes);
 
             BitArray bits = UtilityConverter.FromHex(chiperText);
@@ -85,6 +84,17 @@ namespace DESEncryption
             }
 
             return builder.ToString().Replace("\0","");
+        }
+
+        public static string GenerateKey()
+        {
+            RandomNumberGenerator rng = RandomNumberGenerator.Create();
+            byte[] bytes = new byte[15];
+            Random rand = new Random();
+            int i=rand.Next(100);
+            while (i-- > 0)
+                rng.GetBytes(bytes);
+            return Convert.ToBase64String(bytes);
         }
     }
 }
